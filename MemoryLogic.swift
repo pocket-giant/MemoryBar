@@ -4,10 +4,17 @@ import Foundation
 
 let displayModeKey = "displayMode"
 let percentOnlyKey = "percentOnly"
+let appearanceKey = "appearance"
 
 enum DisplayMode: String {
     case percentage
     case status
+}
+
+enum AppearanceMode: String, CaseIterable {
+    case system = "System"
+    case light = "Light"
+    case dark = "Dark"
 }
 
 /// Friendly label for a memory-used percentage. Uses the same rounding as the
@@ -43,5 +50,10 @@ struct DisplayPreferences {
     var percentOnly: Bool {
         get { defaults.bool(forKey: percentOnlyKey) }
         nonmutating set { defaults.set(newValue, forKey: percentOnlyKey) }
+    }
+
+    var appearance: AppearanceMode {
+        get { defaults.string(forKey: appearanceKey).flatMap(AppearanceMode.init(rawValue:)) ?? .system }
+        nonmutating set { defaults.set(newValue.rawValue, forKey: appearanceKey) }
     }
 }

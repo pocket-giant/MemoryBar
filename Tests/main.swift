@@ -72,8 +72,13 @@ expect(DisplayPreferences(defaults: store).mode, .status, "status persists to a 
 DisplayPreferences(defaults: store).percentOnly = true
 expect(DisplayPreferences(defaults: store).percentOnly, true, "percentOnly persists")
 expect(DisplayPreferences(defaults: store).mode, .status, "setting percentOnly leaves mode alone")
+expect(DisplayPreferences(defaults: store).appearance, .system, "default appearance follows system")
+DisplayPreferences(defaults: store).appearance = .dark
+expect(DisplayPreferences(defaults: store).appearance, .dark, "appearance persists")
 store.set("garbage", forKey: displayModeKey)
 expect(DisplayPreferences(defaults: store).mode, .percentage, "invalid stored value falls back to percentage")
+store.set("garbage", forKey: appearanceKey)
+expect(DisplayPreferences(defaults: store).appearance, .system, "invalid appearance falls back to system")
 
 print(failures == 0 ? "All \(checks) checks passed" : "\(failures) of \(checks) checks FAILED")
 exit(failures == 0 ? 0 : 1)
