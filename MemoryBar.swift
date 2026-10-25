@@ -7,6 +7,7 @@ import UserNotifications
 let warnLevel = 90.0
 let critLevel = 95.0
 let notifyKey = "notificationsEnabled"
+let percentOnlyKey = "percentOnly"
 
 func memoryUsedPercent() -> Double? {
     var stats = vm_statistics64()
@@ -39,12 +40,18 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUserNotifica
     let usageItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
     let notifyItem = NSMenuItem(title: "Notifications", action: #selector(toggleNotifications), keyEquivalent: "")
     let loginItem = NSMenuItem(title: "Open at Login", action: #selector(toggleLogin), keyEquivalent: "")
+    let percentOnlyItem = NSMenuItem(title: "Show Percentage Only", action: #selector(togglePercentOnly), keyEquivalent: "")
     var warned = false
     var alerted = false
 
     var notificationsEnabled: Bool {
         get { UserDefaults.standard.object(forKey: notifyKey) as? Bool ?? true }
         set { UserDefaults.standard.set(newValue, forKey: notifyKey) }
+    }
+
+    var percentOnly: Bool {
+        get { UserDefaults.standard.bool(forKey: percentOnlyKey) }
+        set { UserDefaults.standard.set(newValue, forKey: percentOnlyKey) }
     }
 
     func applicationDidFinishLaunching(_ n: Notification) {
@@ -58,7 +65,7 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUserNotifica
         usageItem.isEnabled = false
         menu.addItem(usageItem)
         menu.addItem(.separator())
-        for i in [notifyItem, loginItem] { i.target = self; menu.addItem(i) }
+        for i in [percentOnlyItem, notifyItem, loginItem] { i.target = self; menu.addItem(i) }
         let test = NSMenuItem(title: "Send Test Notification", action: #selector(sendTest), keyEquivalent: "")
         test.target = self
         menu.addItem(test)
@@ -74,6 +81,7 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUserNotifica
     }
 
     func menuWillOpen(_ menu: NSMenu) {
+        percentOnlyItem.state = percentOnly ? .on : .off
         notifyItem.state = notificationsEnabled ? .on : .off
         loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
     }
@@ -83,6 +91,8 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUserNotifica
     }
 
     @objc func toggleNotifications() { notificationsEnabled.toggle() }
+
+    @objc func togglePercentOnly() { percentOnly.toggle(); update() }
 
     @objc func toggleLogin() {
         let service = SMAppService.mainApp
@@ -145,7 +155,7 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUserNotifica
     func update() {
         guard let pct = memoryUsedPercent() else { return }
         item.button?.attributedTitle = NSAttributedString(
-            string: String(format: "RAM %.0f%%", pct),
+            string: String(format: percentOnly ? "%.0f%%" : "RAM %.0f%%", pct),
             attributes: [.foregroundColor: color(for: pct),
                          .font: NSFont.systemFont(ofSize: 12, weight: .medium)])
         usageItem.title = String(format: "Memory used: %.1f%%", pct)
