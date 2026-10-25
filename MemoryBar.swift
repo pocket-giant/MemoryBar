@@ -7,7 +7,6 @@ import UserNotifications
 let warnLevel = 90.0
 let critLevel = 95.0
 let notifyKey = "notificationsEnabled"
-let percentOnlyKey = "percentOnly"
 
 func memoryUsedPercent() -> Double? {
     var stats = vm_statistics64()
@@ -28,19 +27,22 @@ func memoryUsedPercent() -> Double? {
 
 func color(for pct: Double) -> NSColor {
     switch pct {
-    case ..<70: return .systemGreen
+    case ..<80: return .systemGreen
     case ..<85: return .systemYellow
     case ..<90: return .systemOrange
     default: return .systemRed
     }
 }
 
-final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUserNotificationCenterDelegate {
+final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemValidation, UNUserNotificationCenterDelegate {
     let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     let usageItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
     let notifyItem = NSMenuItem(title: "Notifications", action: #selector(toggleNotifications), keyEquivalent: "")
     let loginItem = NSMenuItem(title: "Open at Login", action: #selector(toggleLogin), keyEquivalent: "")
     let percentOnlyItem = NSMenuItem(title: "Show Percentage Only", action: #selector(togglePercentOnly), keyEquivalent: "")
+    let percentageModeItem = NSMenuItem(title: "Percentage", action: #selector(selectDisplayMode(_:)), keyEquivalent: "")
+    let statusModeItem = NSMenuItem(title: "Status", action: #selector(selectDisplayMode(_:)), keyEquivalent: "")
+    let prefs = DisplayPreferences()
     var warned = false
     var alerted = false
 
@@ -50,8 +52,8 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUserNotifica
     }
 
     var percentOnly: Bool {
-        get { UserDefaults.standard.bool(forKey: percentOnlyKey) }
-        set { UserDefaults.standard.set(newValue, forKey: percentOnlyKey) }
+        get { prefs.percentOnly }
+        set { prefs.percentOnly = newValue }
     }
 
     func applicationDidFinishLaunching(_ n: Notification) {
@@ -65,6 +67,13 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUserNotifica
         usageItem.isEnabled = false
         menu.addItem(usageItem)
         menu.addItem(.separator())
+        let displayItem = NSMenuItem(title: "Display", action: nil, keyEquivalent: "")
+        let displayMenu = NSMenu()
+        percentageModeItem.representedObject = DisplayMode.percentage.rawValue
+        statusModeItem.representedObject = DisplayMode.status.rawValue
+        for i in [percentageModeItem, statusModeItem] { i.target = self; displayMenu.addItem(i) }
+        displayItem.submenu = displayMenu
+        menu.addItem(displayItem)
         for i in [percentOnlyItem, notifyItem, loginItem] { i.target = self; menu.addItem(i) }
         let test = NSMenuItem(title: "Send Test Notification", action: #selector(sendTest), keyEquivalent: "")
         test.target = self
@@ -81,6 +90,8 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUserNotifica
     }
 
     func menuWillOpen(_ menu: NSMenu) {
+        percentageModeItem.state = prefs.mode == .percentage ? .on : .off
+        statusModeItem.state = prefs.mode == .status ? .on : .off
         percentOnlyItem.state = percentOnly ? .on : .off
         notifyItem.state = notificationsEnabled ? .on : .off
         loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
@@ -93,6 +104,17 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUserNotifica
     @objc func toggleNotifications() { notificationsEnabled.toggle() }
 
     @objc func togglePercentOnly() { percentOnly.toggle(); update() }
+
+    @objc func selectDisplayMode(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String, let mode = DisplayMode(rawValue: raw) else { return }
+        prefs.mode = mode
+        update()
+    }
+
+    // "Show Percentage Only" has no effect in Status mode, so grey it out there.
+    func validateMenuItem(_ item: NSMenuItem) -> Bool {
+        item === percentOnlyItem ? prefs.mode == .percentage : true
+    }
 
     @objc func toggleLogin() {
         let service = SMAppService.mainApp
@@ -155,7 +177,7 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUserNotifica
     func update() {
         guard let pct = memoryUsedPercent() else { return }
         item.button?.attributedTitle = NSAttributedString(
-            string: String(format: percentOnly ? "%.0f%%" : "RAM %.0f%%", pct),
+            string: menuBarTitle(pct: pct, mode: prefs.mode, percentOnly: percentOnly),
             attributes: [.foregroundColor: color(for: pct),
                          .font: NSFont.systemFont(ofSize: 12, weight: .medium)])
         usageItem.title = String(format: "Memory used: %.1f%%", pct)
@@ -174,8 +196,13 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, UNUserNotifica
     }
 }
 
-let app = NSApplication.shared
-app.setActivationPolicy(.accessory)
-let delegate = App()
-app.delegate = delegate
-app.run()
+@main
+enum Main {
+    static func main() {
+        let app = NSApplication.shared
+        app.setActivationPolicy(.accessory)
+        let delegate = App()
+        app.delegate = delegate
+        app.run()
+    }
+}

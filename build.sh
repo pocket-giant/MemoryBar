@@ -8,8 +8,8 @@ APP=MemoryBar.app
 rm -rf $APP build stage
 mkdir -p $APP/Contents/MacOS $APP/Contents/Resources build
 cp AppIcon.icns $APP/Contents/Resources/
-swiftc -O -target arm64-apple-macos13 MemoryBar.swift -o build/MemoryBar-arm64
-swiftc -O -target x86_64-apple-macos13 MemoryBar.swift -o build/MemoryBar-x86_64
+swiftc -O -parse-as-library -target arm64-apple-macos13 MemoryBar.swift MemoryLogic.swift -o build/MemoryBar-arm64
+swiftc -O -parse-as-library -target x86_64-apple-macos13 MemoryBar.swift MemoryLogic.swift -o build/MemoryBar-x86_64
 lipo -create build/MemoryBar-arm64 build/MemoryBar-x86_64 -output $APP/Contents/MacOS/MemoryBar
 cat > $APP/Contents/Info.plist <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
