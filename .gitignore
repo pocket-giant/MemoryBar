@@ -1,0 +1,5 @@
+.DS_Store
+MemoryBar.app
+*.dmg
+build/
+stage/
