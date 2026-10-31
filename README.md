@@ -14,7 +14,7 @@ A lightweight Mac menu bar app for keeping an eye on physical memory use.
 
 Free for every Mac (macOS 13 or later, Apple Silicon and Intel). Get the latest `MemoryBar-*.dmg` from [Releases](../../releases/latest), open it and drag **MemoryBar** onto **Applications**.
 
-MemoryBar is not yet notarised by Apple, so the first time you open it macOS will warn you. **Right-click MemoryBar in Applications → Open → Open.** You only need to do this once.
+MemoryBar is signed with Pocket Giant's Developer ID and notarised by Apple, so it opens normally; the first time, macOS asks you to confirm opening an app downloaded from the internet.
 
 Made by [Pocket Giant](https://pocketgiant.games). Small studio. Big games.
 
